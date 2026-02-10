@@ -2,25 +2,22 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Intel Miner v5.2 | Raw Mode</title>
+    <title>Intel Miner v5.5</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root { --bg: #0b0e14; --card: #151921; --accent: #00a3ff; --success: #2ecc71; --error: #e74c3c; --text: #ffffff; --text-dim: #94a3b8; }
-        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; }
+        :root { --bg: #0b0e14; --card: #151921; --accent: #00a3ff; --success: #2ecc71; --text: #ffffff; --text-dim: #94a3b8; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding: 20px; }
+        .container { max-width: 1100px; margin: 0 auto; }
         .search-card { background: var(--card); padding: 20px; border-radius: 10px; border: 1px solid #2d3748; }
-        .form-row { display: grid; gap: 15px; grid-template-columns: 2fr 0.8fr 1.5fr auto; align-items: end; }
-        label { font-size: 0.7rem; color: var(--accent); font-weight: bold; display: block; margin-bottom: 5px; }
-        input, select { background: #0b0e14; border: 1px solid #2d3748; color: white; padding: 10px; border-radius: 4px; width: 100%; box-sizing: border-box; }
-        .btn-primary { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; font-weight: 600; cursor: pointer; width: 100%; }
-        .grid-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 15px; margin-top: 30px; }
-        .result-card { background: var(--card); padding: 15px; border-radius: 8px; border: 1px solid #2d3748; border-bottom: 3px solid #333; }
-        .btn-view { background: none; color: var(--accent); border: 1px solid var(--accent); padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; margin-top: 10px; width: 100%; }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; padding: 20px; }
-        .modal-content { background: var(--card); width: 100%; max-width: 800px; max-height: 80vh; border-radius: 10px; border: 1px solid var(--accent); display: flex; flex-direction: column; }
-        .modal-body { padding: 20px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; color: #00ff00; font-size: 0.85rem; }
+        .form-row { display: grid; gap: 15px; grid-template-columns: 2fr 1fr 1.5fr auto; align-items: end; }
+        input, select { background: #0b0e14; border: 1px solid #2d3748; color: white; padding: 10px; border-radius: 4px; width: 100%; }
+        .btn-primary { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .grid-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; margin-top: 30px; }
+        .result-card { background: var(--card); padding: 15px; border-radius: 8px; border: 1px solid #2d3748; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; }
+        .modal-content { background: var(--card); width: 90%; max-width: 800px; max-height: 80vh; border-radius: 10px; border: 1px solid var(--accent); display: flex; flex-direction: column; }
         .loader-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 3000; }
-        #terminal { background: #000; color: #0f0; width: 80%; height: 120px; padding: 15px; border-radius: 6px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; margin-top: 20px; border: 1px solid #333; }
+        #terminal { background: #000; color: #0f0; width: 80%; max-width: 600px; height: 150px; padding: 15px; border-radius: 6px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; margin-top: 20px; border: 1px solid #333; }
     </style>
 </head>
 <body>
@@ -31,13 +28,13 @@
     <div class="search-card">
         <form action="/" method="POST" onsubmit="startTracking()">
             <div class="form-row">
-                <div><label>TARGET KEYWORD</label><input type="text" name="keyword" placeholder="e.g. internal report" required></div>
-                <div><label>LIMIT</label><select name="limit"><option value="5">5 Files</option><option value="10">10 Files</option></select></div>
-                <div><label>MODE</label>
+                <div><label style="color:var(--accent); font-size:0.7rem;">KEYWORD</label><input type="text" name="keyword" placeholder="Search..." required></div>
+                <div><label style="color:var(--accent); font-size:0.7rem;">LIMIT</label><select name="limit"><option value="5">5 Files</option><option value="10">10 Files</option></select></div>
+                <div><label style="color:var(--accent); font-size:0.7rem;">MODE</label>
                     <select name="filter_mode">
                         <option value="urls_only">URLs Only</option>
                         <option value="leads_only">URLs + Emails</option>
-                        <option value="raw_mode" style="color:var(--error);">RAW MODE (Full Text)</option>
+                        <option value="raw_mode">RAW MODE (Full Text)</option>
                     </select>
                 </div>
                 <button type="submit" class="btn-primary">START</button>
@@ -48,17 +45,16 @@
     {% if show_download %}
     <textarea id="rawBuffer" style="display:none;">{{ full_content }}</textarea>
     <div style="margin-top:40px; display:flex; justify-content:space-between; align-items:center;">
-        <h3 style="margin:0;">Results for: {{ keyword }}</h3>
-        <button onclick="downloadLocal()" class="btn-primary" style="background:var(--success); width:auto; padding:10px 20px;">DOWNLOAD TXT</button>
+        <h3>Results: {{ keyword }}</h3>
+        <button onclick="downloadLocal()" class="btn-primary" style="background:var(--success); width:auto;">DOWNLOAD .TXT</button>
     </div>
-
     <div class="grid-results">
         {% for item in results %}
         <div class="result-card">
             <h4 style="margin:0; font-size:0.8rem; height:1.2rem; overflow:hidden;">{{ item.title }}</h4>
-            <p style="font-size:0.7rem; color:var(--text-dim); margin:5px 0;">Status: {{ item.status }}</p>
+            <p style="font-size:0.75rem; color:var(--text-dim);">{{ item.status }}</p>
             {% if item.content %}
-                <button class="btn-view" onclick='showPreview({{ item.content | tojson }})'>VIEW DATA</button>
+            <button onclick='showPreview({{ item.content | tojson }})' style="background:none; border:1px solid var(--accent); color:var(--accent); cursor:pointer; width:100%; padding:5px; border-radius:4px; margin-top:10px;">VIEW DATA</button>
             {% endif %}
         </div>
         {% endfor %}
@@ -70,14 +66,14 @@
     <div class="modal-content">
         <div style="padding:15px; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
             <strong>Data Preview</strong>
-            <button onclick="closeModal()" style="background:none; border:none; color:white; cursor:pointer;">&times; CLOSE</button>
+            <button onclick="closeModal()" style="color:white; background:none; border:none; cursor:pointer; font-size:1.2rem;">&times;</button>
         </div>
-        <div class="modal-body" id="modalBody"></div>
+        <div id="modalBody" style="padding:20px; overflow-y:auto; font-family:monospace; white-space:pre-wrap; color:#0f0; font-size:0.85rem;"></div>
     </div>
 </div>
 
 <div id="loader" class="loader-overlay" style="display:none;">
-    <h2 id="p-status">Mining...</h2>
+    <h2 id="p-status">Mining Data...</h2>
     <div style="width:300px; height:4px; background:#2d3748; border-radius:2px; margin:15px 0; overflow:hidden;">
         <div id="p-bar" style="width:0%; height:100%; background:var(--accent); transition:0.3s;"></div>
     </div>
@@ -86,25 +82,28 @@
 
 <script>
     function downloadLocal() {
-        const val = document.getElementById('rawBuffer').value;
-        if(!val.trim()) return alert("No data to save.");
-        const blob = new Blob([val], { type: 'text/plain' });
-        const a = document.createElement('a');
+        var val = document.getElementById('rawBuffer').value;
+        if(!val.trim()) { alert("No data to save."); return; }
+        var blob = new Blob([val], { type: 'text/plain' });
+        var a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = "miner_export.txt";
         a.click();
     }
-    function showPreview(c) { document.getElementById('modalBody').innerText = c; document.getElementById('previewModal').style.display = 'flex'; }
+    function showPreview(c) {
+        document.getElementById('modalBody').innerText = c;
+        document.getElementById('previewModal').style.display = 'flex';
+    }
     function closeModal() { document.getElementById('previewModal').style.display = 'none'; }
     function startTracking() {
         document.getElementById('loader').style.display = 'flex';
-        const term = document.getElementById('terminal');
-        const es = new EventSource("/progress-stream");
-        es.onmessage = (e) => {
-            const d = JSON.parse(e.data);
+        var term = document.getElementById('terminal');
+        var es = new EventSource("/progress-stream");
+        es.onmessage = function(e) {
+            var d = JSON.parse(e.data);
             document.getElementById('p-status').innerText = d.status;
             document.getElementById('p-bar').style.width = (d.total > 0 ? (d.current/d.total)*100 : 0) + "%";
-            if(d.preview) { term.innerHTML += `<br>> ${d.preview}`; term.scrollTop = term.scrollHeight; }
+            if(d.preview) { term.innerHTML += "<br>> " + d.preview; term.scrollTop = term.scrollHeight; }
             if(d.status === "Completed") es.close();
         };
     }

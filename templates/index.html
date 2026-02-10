@@ -2,32 +2,53 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Google PDF Miner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Intel Miner | Stealth Mode</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <button class="theme-toggle" onclick="toggleTheme()" id="tBtn"><i class="fa-solid fa-moon"></i></button>
+    <button class="theme-toggle" onclick="toggleTheme()" id="tBtn">
+        <i class="fa-solid fa-moon"></i>
+    </button>
 
     <div class="container">
         <header class="dashboard-header">
-            <h1><i class="fa-brands fa-google"></i> GOOGLE MINER</h1>
-            <p>Direct Google Search & PDF Extraction</p>
+            <h1><i class="fa-brands fa-google"></i> GOOGLE PDF MINER</h1>
+            <p><i class="fa-solid fa-shield-halved"></i> Stealth Extraction & URL Intelligence</p>
         </header>
 
         <div class="search-card">
             <form action="/" method="POST" onsubmit="startTracking()">
-                <div class="form-row">
-                    <div class="form-group"><label>Google Search Query</label><input type="text" name="keyword" placeholder="Search keyword..." required></div>
+                <div class="form-row" style="grid-template-columns: 2fr 0.8fr 1.2fr 0.8fr 1.2fr auto;">
                     <div class="form-group">
-                        <label>Max Results</label>
+                        <label>Target Keyword</label>
+                        <input type="text" name="keyword" placeholder="e.g. 'internal report'" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Limit</label>
                         <select name="limit">
-                            <option value="5">5</option>
-                            <option value="10">10</option>
-                            <option value="20">20</option>
+                            <option value="5">5 Files</option>
+                            <option value="10" selected>10 Files</option>
+                            <option value="20">20 Files</option>
                         </select>
                     </div>
-                    <div class="form-group"><label>Separator Every X</label><input type="number" name="line_interval" value="30"></div>
+
+                    <div class="form-group">
+                        <label>Stealth Delay</label>
+                        <select name="delay">
+                            <option value="1.0">1s (Fast)</option>
+                            <option value="3.0" selected>3s (Safe)</option>
+                            <option value="5.0">5s (Stealth)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>__SEP__ Lines</label>
+                        <input type="number" name="line_interval" value="30">
+                    </div>
+
                     <div class="form-group">
                         <label>Filter Mode</label>
                         <select name="filter_mode">
@@ -35,23 +56,31 @@
                             <option value="leads_only">URLs + Pro Emails</option>
                         </select>
                     </div>
-                    <button type="submit" class="btn-primary">SCAN GOOGLE</button>
+
+                    <button type="submit" class="btn-primary">
+                        <i class="fa-solid fa-magnifying-glass"></i> SCAN
+                    </button>
                 </div>
             </form>
         </div>
+
         {% if show_download %}
+        <textarea id="rawBuffer" style="display:none;">{{ full_content }}</textarea>
+
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:40px;">
-            <h2>Mined Data</h2>
-            <textarea id="rawBuffer" style="display:none;">{{ full_content }}</textarea>
+            <h2>Scanned: <span style="color:var(--accent-glow);">{{ keyword }}</span></h2>
             <button onclick="downloadLocal()" class="btn-primary" style="background:var(--accent-success); border:none;">
-                <i class="fa-solid fa-file-download"></i> SAVE DATA
+                <i class="fa-solid fa-file-arrow-down"></i> DOWNLOAD CLEAN TXT
             </button>
         </div>
+
         <div class="grid-results">
             {% for item in results %}
-            <div class="result-card" style="opacity: {{ '1' if item.status == 'Success' else '0.5' }};">
-                <h3 style="font-size:0.75rem;">{{ item.title }}</h3>
-                <p style="font-size:0.65rem; color:var(--text-dim);">{{ item.status }}</p>
+            <div class="result-card" style="opacity: {{ '1' if item.status == 'Success' else '0.6' }};">
+                <h3 title="{{ item.title }}">{{ item.title[:35] }}{{ '...' if item.title|length > 35 }}</h3>
+                <p style="font-size:0.7rem; color:var(--text-dim);">
+                    <i class="fa-solid fa-circle-info"></i> {{ item.status }}
+                </p>
                 <div class="status-bar {{ 'success' if item.status == 'Success' else 'fail' }}"></div>
             </div>
             {% endfor %}
@@ -61,39 +90,18 @@
 
     <div id="loader" class="loader-overlay" style="display:none;">
         <div class="spinner"></div>
-        <h2 id="p-status">Google is searching...</h2>
-        <div class="progress-bar-bg"><div id="p-bar" class="progress-bar-fill"></div></div>
-        <p><span id="p-percent">0</span>%</p>
+        <h2 id="p-status">Initiating Google Dork...</h2>
+        <div class="progress-bar-bg">
+            <div id="p-bar" class="progress-bar-fill"></div>
+        </div>
+        <div style="font-family:'JetBrains Mono'; text-align:center;">
+            <p><span id="p-percent">0</span>% Complete</p>
+            <p id="p-count" style="font-size:0.8rem; color:var(--text-dim);">0 / 0 Files Processed</p>
+        </div>
     </div>
 
     <script>
-        function downloadLocal() {
-            const data = document.getElementById('rawBuffer').value;
-            if(!data.trim()) return;
-            const blob = new Blob([data], { type: 'text/plain' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = "google_mined_data.txt";
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-        }
-        window.onload = function() {
-            const buffer = document.getElementById('rawBuffer');
-            if (buffer && buffer.value.trim().length > 0) { downloadLocal(); }
-        };
-        function startTracking() {
-            document.getElementById('loader').style.display = 'flex';
-            const es = new EventSource("/progress-stream");
-            es.onmessage = (e) => {
-                const d = JSON.parse(e.data);
-                const pct = d.total > 0 ? Math.round((d.current / d.total) * 100) : 0;
-                document.getElementById('p-status').innerText = d.status;
-                document.getElementById('p-bar').style.width = pct + "%";
-                document.getElementById('p-percent').innerText = pct;
-                if(d.status === "Completed") es.close();
-            };
-        }
+        // 1. Theme Logic
         function toggleTheme() {
             document.body.classList.toggle('light-mode');
             const isL = document.body.classList.contains('light-mode');
@@ -101,6 +109,61 @@
             document.getElementById('tBtn').innerHTML = isL ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
         }
         if(localStorage.getItem('theme')==='light') toggleTheme();
+
+        // 2. Client-Side Download (Bypasses Vercel Timeouts/Memory)
+        function downloadLocal() {
+            const data = document.getElementById('rawBuffer').value;
+            if(!data.trim()) {
+                alert("No URLs found. Try a different keyword or filter.");
+                return;
+            }
+            const blob = new Blob([data], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = "google_intel_export.txt";
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+
+        // 3. Auto-Trigger Download on page load if results exist
+        window.onload = function() {
+            const buffer = document.getElementById('rawBuffer');
+            if (buffer && buffer.value.trim().length > 0) {
+                downloadLocal();
+            }
+        };
+
+        // 4. Real-time Progress Tracking (SSE)
+        function startTracking() {
+            // Show the loader immediately
+            document.getElementById('loader').style.display = 'flex';
+            
+            const es = new EventSource("/progress-stream");
+            
+            es.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                const pct = data.total > 0 ? Math.round((data.current / data.total) * 100) : 0;
+                
+                // Update UI elements
+                document.getElementById('p-status').innerText = data.status;
+                document.getElementById('p-bar').style.width = pct + "%";
+                document.getElementById('p-percent').innerText = pct;
+                document.getElementById('p-count').innerText = `${data.current} / ${data.total} Files`;
+                
+                if(data.status === "Completed") {
+                    es.close();
+                }
+            };
+
+            es.onerror = () => {
+                console.log("Progress stream closed or interrupted.");
+                es.close();
+            };
+        }
     </script>
 </body>
 </html>

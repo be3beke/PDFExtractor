@@ -1,98 +1,77 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;500&display=swap');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Intel Miner | Google API Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .terminal-bg { background-color: #0a0a0a; border: 1px solid #333; }
+        .progress-fill { transition: width 0.4s ease-in-out; }
+    </style>
+</head>
+<body class="bg-black text-gray-200 font-mono p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-blue-500 mb-2">INTEL MINER <span class="text-xs bg-blue-900 text-blue-200 px-2 py-1 rounded">API MODE</span></h1>
+        
+        <form method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-zinc-900 p-6 rounded-lg border border-zinc-800">
+            <div>
+                <label class="block text-xs uppercase text-zinc-500 mb-1">Target Keyword</label>
+                <input type="text" name="keyword" placeholder="e.g. 'confidential' 2024" class="w-full bg-black border border-zinc-700 p-2 rounded focus:border-blue-500 outline-none" required>
+            </div>
+            <div>
+                <label class="block text-xs uppercase text-zinc-500 mb-1">Intelligence Mode</label>
+                <select name="filter_mode" class="w-full bg-black border border-zinc-700 p-2 rounded outline-none">
+                    <option value="raw_mode">Full Raw Extraction</option>
+                    <option value="leads_only">Leads Mode (Emails/URLs)</option>
+                    <option value="urls_only">URL Harvesting Only</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded transition">START MINING</button>
+            </div>
+        </form>
 
-:root {
-    --bg-deep: #0a0f18;
-    --glass-bg: rgba(30, 41, 59, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --accent-glow: #38bdf8;
-    --accent-success: #10b981;
-    --text-primary: #f8fafc;
-    --text-dim: #94a3b8;
-    --input-bg: rgba(15, 23, 42, 0.6);
-}
+        <div id="progress-container" class="mb-8 hidden">
+            <div class="flex justify-between mb-1 text-xs uppercase text-zinc-400">
+                <span id="status-text">Ready</span>
+                <span id="percent-text">0%</span>
+            </div>
+            <div class="w-full bg-zinc-800 h-2 rounded-full overflow-hidden">
+                <div id="progress-bar" class="bg-blue-500 h-full progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
 
-.light-mode {
-    --bg-deep: #f1f5f9;
-    --glass-bg: rgba(255, 255, 255, 0.8);
-    --glass-border: rgba(0, 0, 0, 0.1);
-    --accent-glow: #0284c7;
-    --accent-success: #059669;
-    --text-primary: #0f172a;
-    --text-dim: #475569;
-    --input-bg: #ffffff;
-}
+        {% if results %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for r in results %}
+            <div class="terminal-bg p-4 rounded text-sm">
+                <div class="flex justify-between border-b border-zinc-800 pb-2 mb-2">
+                    <span class="text-zinc-400 truncate w-40">{{ r.title }}</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] {% if r.status == 'Success' %}bg-green-900 text-green-300{% else %}bg-red-900 text-red-300{% endif %}">
+                        {{ r.status }}
+                    </span>
+                </div>
+                <pre class="h-24 overflow-y-auto text-zinc-500 text-[11px]">{{ r.content[:200] }}...</pre>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
 
-body {
-    background: var(--bg-deep);
-    color: var(--text-primary);
-    font-family: 'Inter', sans-serif;
-    margin: 0; padding: 40px 20px;
-    transition: 0.3s ease;
-}
-
-.theme-toggle {
-    position: fixed; top: 20px; right: 20px;
-    background: var(--glass-bg); border: 1px solid var(--glass-border);
-    padding: 12px; border-radius: 50%; cursor: pointer; color: var(--text-primary);
-    backdrop-filter: blur(10px); z-index: 1000;
-}
-
-.container { max-width: 1150px; margin: 0 auto; }
-
-.dashboard-header {
-    border-left: 5px solid var(--accent-glow);
-    padding-left: 20px; margin-bottom: 40px;
-}
-
-.search-card {
-    background: var(--glass-bg); backdrop-filter: blur(15px);
-    border: 1px solid var(--glass-border); border-radius: 24px; padding: 35px;
-}
-
-.form-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1.5fr auto; gap: 15px; align-items: flex-end; }
-
-.form-group label {
-    display: block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-    color: var(--accent-glow); margin-bottom: 8px; letter-spacing: 1px;
-}
-
-input, select {
-    width: 100%; background: var(--input-bg); border: 1px solid var(--glass-border);
-    color: var(--text-primary); padding: 12px; border-radius: 10px; font-size: 0.9rem;
-}
-
-.btn-primary {
-    background: var(--accent-glow); color: #fff; border: none;
-    padding: 13px 25px; border-radius: 10px; font-weight: 800; cursor: pointer;
-    transition: transform 0.2s;
-}
-
-.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(56, 189, 248, 0.3); }
-
-.grid-results {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 15px; margin-top: 40px;
-}
-
-.result-card {
-    background: var(--glass-bg); border: 1px solid var(--glass-border);
-    border-radius: 15px; padding: 18px; position: relative;
-}
-
-.status-bar { position: absolute; bottom: 0; left: 0; height: 5px; width: 100%; border-radius: 0 0 15px 15px; }
-.status-bar.success { background: var(--accent-success); }
-.status-bar.fail { background: #ef4444; }
-
-.loader-overlay {
-    position: fixed; inset: 0; background: var(--bg-deep);
-    display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000;
-}
-
-.progress-bar-bg { width: 350px; height: 10px; background: rgba(255,255,255,0.1); border-radius: 20px; margin: 25px 0; overflow: hidden; }
-.progress-bar-fill { height: 100%; background: var(--accent-glow); width: 0%; transition: width 0.4s ease; }
-
-.spinner {
-    width: 60px; height: 60px; border: 4px solid transparent;
-    border-top-color: var(--accent-glow); border-radius: 50%; animation: spin 1s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
+    <script>
+        const form = document.querySelector('form');
+        form.onsubmit = () => {
+            document.getElementById('progress-container').classList.remove('hidden');
+            const evtSource = new EventSource("/progress-stream");
+            evtSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                const percent = (data.current / data.total) * 100 || 0;
+                document.getElementById('status-text').innerText = data.status;
+                document.getElementById('percent-text').innerText = Math.round(percent) + "%";
+                document.getElementById('progress-bar').style.width = percent + "%";
+                if (data.status === "Completed") evtSource.close();
+            };
+        };
+    </script>
+</body>
+</html>

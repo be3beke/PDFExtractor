@@ -1,22 +1,19 @@
 import json
 import time
 import io
-import os
 import requests
 import re
 from flask import Flask, render_template, request, Response
 from pypdf import PdfReader
+from googlesearch import search  # New library for Google Search
 
 app = Flask(__name__, template_folder='../templates', static_folder='../static')
 
-# Global progress state
 progress_data = {"current": 0, "total": 0, "status": "Idle", "active": False}
 
 def inject_separators(text, line_interval):
-    """Adds __SEP__ every X non-empty lines."""
     raw_lines = text.splitlines()
     clean_lines = [line.strip() for line in raw_lines if line.strip()]
-    
     result = []
     for i, line in enumerate(clean_lines):
         result.append(line)
@@ -25,7 +22,6 @@ def inject_separators(text, line_interval):
     return "\n".join(result)
 
 def apply_intelligence_filter(text, mode):
-    """Filters lines for URLs or Professional Emails."""
     lines = text.splitlines()
     filtered = []
     url_p = r'https?://\S+|www\.\S+'
@@ -34,8 +30,6 @@ def apply_intelligence_filter(text, mode):
     
     for line in lines:
         has_url = re.search(url_p, line)
-        
-        # In 'leads_only' mode, we also look for pro emails
         valid_eml = False
         if mode == "leads_only":
             email_m = re.search(eml_p, line)
@@ -46,18 +40,7 @@ def apply_intelligence_filter(text, mode):
         
         if has_url or valid_eml:
             filtered.append(line.strip())
-            
     return "\n".join(filtered)
-
-def get_pdf_link(identifier):
-    try:
-        data = requests.get(f"https://archive.org/metadata/{identifier}", timeout=5).json()
-        for f in data.get('files', []):
-            if f.get('name', '').lower().endswith('.pdf'):
-                return f"https://archive.org/download/{identifier}/{f['name']}"
-    except:
-        return None
-    return None
 
 @app.route('/progress-stream')
 def progress_stream():
@@ -65,8 +48,7 @@ def progress_stream():
         while True:
             yield f"data: {json.dumps(progress_data)}\n\n"
             time.sleep(0.5)
-            if progress_data["status"] == "Completed":
-                break
+            if progress_data["status"] == "Completed": break
     return Response(generate(), mimetype='text/event-stream')
 
 @app.route('/', methods=['GET', 'POST'])
@@ -78,51 +60,52 @@ def index():
         line_interval = int(request.form.get('line_interval', 30))
         filter_mode = request.form.get('filter_mode')
         
-        progress_data = {"current": 0, "total": limit, "status": "Connecting...", "active": True}
+        query = f"{keyword} filetype:pdf"
+        progress_data = {"current": 0, "total": limit, "status": "Searching Google...", "active": True}
         
-        search_url = "https://archive.org/advancedsearch.php"
-        params = {'q': f'({keyword}) AND format:PDF', 'fl[]': 'identifier,title', 'rows': limit, 'output': 'json'}
+        # Collect PDF URLs from Google
+        pdf_urls = []
         try:
-            docs = requests.get(search_url, params=params).json().get('response', {}).get('docs', [])
-        except:
-            docs = []
+            # Using the search library to find PDF links
+            for url in search(query, num_results=limit):
+                if url.lower().endswith('.pdf'):
+                    pdf_urls.append(url)
+        except Exception as e:
+            print(f"Search Error: {e}")
 
-        progress_data["total"] = len(docs)
+        progress_data["total"] = len(pdf_urls)
         results = []
         final_text = "" 
         url_pattern = r'https?://\S+|www\.\S+'
 
-        for i, item in enumerate(docs):
+        for i, pdf_url in enumerate(pdf_urls):
             progress_data["current"] = i + 1
-            progress_data["status"] = f"Checking: {item.get('title', 'Doc')[:20]}..."
-            pdf_url = get_pdf_link(item['identifier'])
+            progress_data["status"] = f"Fetching PDF {i+1}..."
             
-            if pdf_url:
-                try:
-                    r = requests.get(pdf_url, timeout=12)
+            try:
+                r = requests.get(pdf_url, timeout=10, headers={'User-Agent': 'Mozilla/5.0'})
+                if r.status_code == 200:
                     with io.BytesIO(r.content) as f:
                         reader = PdfReader(f)
                         raw_content = "\n".join([p.extract_text() for p in reader.pages if p.extract_text()])
                     
-                    # --- NEW SKIP LOGIC ---
-                    # Check if the raw text contains at least one URL
+                    # Check if text contains any URL as per your requirement
                     if not re.search(url_pattern, raw_content):
-                        results.append({'title': item['title'], 'status': 'Skipped (No URLs)'})
-                        continue 
+                        results.append({'title': pdf_url.split('/')[-1], 'status': 'Skipped (No URLs)'})
+                        continue
 
-                    # If URL found, proceed with filtering
                     filtered = apply_intelligence_filter(raw_content, filter_mode)
                     processed = inject_separators(filtered, line_interval)
                     
                     if processed.strip():
                         final_text += f"{processed}\n\n"
-                        results.append({'title': item['title'], 'status': 'Success'})
+                        results.append({'title': pdf_url.split('/')[-1][:40], 'status': 'Success'})
                     else:
-                        results.append({'title': item['title'], 'status': 'No Matching Lines'})
-                except:
-                    results.append({'title': item['title'], 'status': 'Error'})
-            else:
-                results.append({'title': item['title'], 'status': 'Missing'})
+                        results.append({'title': pdf_url.split('/')[-1][:40], 'status': 'No Matching Lines'})
+                else:
+                    results.append({'title': 'External Link', 'status': f'Error {r.status_code}'})
+            except Exception:
+                results.append({'title': 'External Link', 'status': 'Connection Failed'})
 
         progress_data["status"] = "Completed"
         return render_template('index.html', results=results, keyword=keyword, show_download=True, full_content=final_text)

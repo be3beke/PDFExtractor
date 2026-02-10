@@ -48,7 +48,6 @@ def progress_stream():
 @app.route('/', methods=['GET', 'POST'])
 def index():
     global progress_data
-    start_time = time.time()
     
     if request.method == 'POST':
         keyword = request.form.get('keyword')

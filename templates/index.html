@@ -2,72 +2,63 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Intel Miner v5.0 | Preview Mode</title>
+    <title>Intel Miner v5.2 | Raw Mode</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root { --bg: #0b0e14; --card: #151921; --accent: #00a3ff; --success: #2ecc71; --error: #e74c3c; --text: #ffffff; --text-dim: #94a3b8; }
         body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; padding: 20px; }
         .container { max-width: 1000px; margin: 0 auto; }
-        header { border-left: 4px solid var(--accent); padding-left: 20px; margin-bottom: 30px; }
-        .search-card { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid #2d3748; }
-        .form-row { display: grid; gap: 15px; grid-template-columns: 2fr 0.8fr 1fr 1fr auto; align-items: end; }
-        .form-group label { display: block; font-size: 0.7rem; color: var(--accent); font-weight: 800; margin-bottom: 8px; text-transform: uppercase; }
-        input, select { background: #0b0e14; border: 1px solid #2d3748; color: white; padding: 10px; border-radius: 6px; width: 100%; box-sizing: border-box; }
-        .btn-primary { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 6px; font-weight: 600; cursor: pointer; }
-        
-        /* Grid */
-        .grid-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 15px; margin-top: 20px; }
-        .result-card { background: var(--card); padding: 15px; border-radius: 8px; border: 1px solid #2d3748; position: relative; }
-        .btn-preview { background: rgba(255,255,255,0.05); color: var(--accent); border: 1px solid var(--accent); padding: 4px 8px; font-size: 0.7rem; border-radius: 4px; cursor: pointer; margin-top: 10px; }
-        
-        /* Modal */
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000; align-items: center; justify-content: center; padding: 20px; }
-        .modal-content { background: var(--card); width: 100%; max-width: 700px; max-height: 80vh; border-radius: 12px; border: 1px solid var(--accent); display: flex; flex-direction: column; }
-        .modal-header { padding: 15px; border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; }
-        .modal-body { padding: 20px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 0.85rem; white-space: pre-wrap; color: #00ff00; }
-
-        /* Loader */
-        .loader-overlay { position: fixed; inset: 0; background: rgba(11, 14, 20, 0.98); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        .progress-bar-bg { width: 300px; height: 6px; background: #2d3748; border-radius: 3px; margin: 20px 0; overflow: hidden; }
-        .progress-bar-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.3s; }
-        #live-terminal { background: #000; color: #0f0; font-family: monospace; padding: 15px; width: 80%; max-width: 600px; height: 120px; border-radius: 6px; overflow-y: auto; font-size: 0.8rem; border: 1px solid #333; }
+        .search-card { background: var(--card); padding: 20px; border-radius: 10px; border: 1px solid #2d3748; }
+        .form-row { display: grid; gap: 15px; grid-template-columns: 2fr 0.8fr 1.5fr auto; align-items: end; }
+        label { font-size: 0.7rem; color: var(--accent); font-weight: bold; display: block; margin-bottom: 5px; }
+        input, select { background: #0b0e14; border: 1px solid #2d3748; color: white; padding: 10px; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        .btn-primary { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; font-weight: 600; cursor: pointer; width: 100%; }
+        .grid-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 15px; margin-top: 30px; }
+        .result-card { background: var(--card); padding: 15px; border-radius: 8px; border: 1px solid #2d3748; border-bottom: 3px solid #333; }
+        .btn-view { background: none; color: var(--accent); border: 1px solid var(--accent); padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; margin-top: 10px; width: 100%; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: var(--card); width: 100%; max-width: 800px; max-height: 80vh; border-radius: 10px; border: 1px solid var(--accent); display: flex; flex-direction: column; }
+        .modal-body { padding: 20px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; color: #00ff00; font-size: 0.85rem; }
+        .loader-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 3000; }
+        #terminal { background: #000; color: #0f0; width: 80%; height: 120px; padding: 15px; border-radius: 6px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; margin-top: 20px; border: 1px solid #333; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <header>
-        <h1 style="margin:0;">INTEL MINER <span style="font-weight:200; opacity:0.6;">v5.0</span></h1>
-        <p style="color:var(--text-dim); margin:5px 0;">Automated OSINT PDF Extraction</p>
-    </header>
+    <header><h1><i class="fa-solid fa-microchip"></i> INTEL MINER</h1></header>
 
     <div class="search-card">
         <form action="/" method="POST" onsubmit="startTracking()">
             <div class="form-row">
-                <div class="form-group"><label>Keyword</label><input type="text" name="keyword" required></div>
-                <div class="form-group"><label>Limit</label><select name="limit"><option value="5">5</option><option value="10">10</option></select></div>
-                <div class="form-group"><label>Delay</label><select name="delay"><option value="3.0">3s</option><option value="7.0" selected>7s</option></select></div>
-                <div class="form-group"><label>Mode</label><select name="filter_mode"><option value="urls_only">URLs Only</option><option value="leads_only">URLs + Emails</option></select></div>
-                <button type="submit" class="btn-primary">SCAN</button>
+                <div><label>TARGET KEYWORD</label><input type="text" name="keyword" placeholder="e.g. internal report" required></div>
+                <div><label>LIMIT</label><select name="limit"><option value="5">5 Files</option><option value="10">10 Files</option></select></div>
+                <div><label>MODE</label>
+                    <select name="filter_mode">
+                        <option value="urls_only">URLs Only</option>
+                        <option value="leads_only">URLs + Emails</option>
+                        <option value="raw_mode" style="color:var(--error);">RAW MODE (Full Text)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary">START</button>
             </div>
         </form>
     </div>
 
     {% if show_download %}
     <textarea id="rawBuffer" style="display:none;">{{ full_content }}</textarea>
-    <div style="margin-top:40px; display:flex; justify-content:space-between;">
+    <div style="margin-top:40px; display:flex; justify-content:space-between; align-items:center;">
         <h3 style="margin:0;">Results for: {{ keyword }}</h3>
-        <button onclick="downloadLocal()" class="btn-primary" style="background:var(--success);">DOWNLOAD ALL</button>
+        <button onclick="downloadLocal()" class="btn-primary" style="background:var(--success); width:auto; padding:10px 20px;">DOWNLOAD TXT</button>
     </div>
 
     <div class="grid-results">
         {% for item in results %}
         <div class="result-card">
-            <h4 style="margin:0; font-size:0.8rem; overflow:hidden; text-overflow:ellipsis;">{{ item.title }}</h4>
+            <h4 style="margin:0; font-size:0.8rem; height:1.2rem; overflow:hidden;">{{ item.title }}</h4>
             <p style="font-size:0.7rem; color:var(--text-dim); margin:5px 0;">Status: {{ item.status }}</p>
-            {% if item.status == 'Success' %}
-                <button class="btn-preview" onclick='showPreview({{ item.content | tojson }})'>VIEW TEXT</button>
+            {% if item.content %}
+                <button class="btn-view" onclick='showPreview({{ item.content | tojson }})'>VIEW DATA</button>
             {% endif %}
         </div>
         {% endfor %}
@@ -77,55 +68,46 @@
 
 <div id="previewModal" class="modal">
     <div class="modal-content">
-        <div class="modal-header">
+        <div style="padding:15px; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
             <strong>Data Preview</strong>
-            <button onclick="closeModal()" style="background:none; border:none; color:white; cursor:pointer; font-size:1.2rem;">&times;</button>
+            <button onclick="closeModal()" style="background:none; border:none; color:white; cursor:pointer;">&times; CLOSE</button>
         </div>
         <div class="modal-body" id="modalBody"></div>
     </div>
 </div>
 
 <div id="loader" class="loader-overlay" style="display:none;">
-    <div class="spinner" style="width:40px; height:40px; border:4px solid #2d3748; border-top-color:var(--accent); border-radius:50%; animation:spin 1s linear infinite;"></div>
-    <h3 id="p-status" style="margin:20px 0 10px;">Searching...</h3>
-    <div class="progress-bar-bg"><div id="p-bar" class="progress-bar-fill"></div></div>
-    <div id="live-terminal"></div>
+    <h2 id="p-status">Mining...</h2>
+    <div style="width:300px; height:4px; background:#2d3748; border-radius:2px; margin:15px 0; overflow:hidden;">
+        <div id="p-bar" style="width:0%; height:100%; background:var(--accent); transition:0.3s;"></div>
+    </div>
+    <div id="terminal"></div>
 </div>
 
 <script>
     function downloadLocal() {
-        const data = document.getElementById('rawBuffer').value;
-        if(!data.trim()) return alert("No data found.");
-        const blob = new Blob([data], { type: 'text/plain' });
+        const val = document.getElementById('rawBuffer').value;
+        if(!val.trim()) return alert("No data to save.");
+        const blob = new Blob([val], { type: 'text/plain' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = "extraction_results.txt";
+        a.download = "miner_export.txt";
         a.click();
     }
-
-    function showPreview(content) {
-        document.getElementById('modalBody').innerText = content;
-        document.getElementById('previewModal').style.display = 'flex';
-    }
-
+    function showPreview(c) { document.getElementById('modalBody').innerText = c; document.getElementById('previewModal').style.display = 'flex'; }
     function closeModal() { document.getElementById('previewModal').style.display = 'none'; }
-
     function startTracking() {
         document.getElementById('loader').style.display = 'flex';
-        const term = document.getElementById('live-terminal');
+        const term = document.getElementById('terminal');
         const es = new EventSource("/progress-stream");
         es.onmessage = (e) => {
             const d = JSON.parse(e.data);
             document.getElementById('p-status').innerText = d.status;
             document.getElementById('p-bar').style.width = (d.total > 0 ? (d.current/d.total)*100 : 0) + "%";
-            if(d.preview) {
-                term.innerHTML += `<br>> ${d.preview}`;
-                term.scrollTop = term.scrollHeight;
-            }
+            if(d.preview) { term.innerHTML += `<br>> ${d.preview}`; term.scrollTop = term.scrollHeight; }
             if(d.status === "Completed") es.close();
         };
     }
 </script>
-<style> @keyframes spin { to { transform: rotate(360deg); } } </style>
 </body>
 </html>

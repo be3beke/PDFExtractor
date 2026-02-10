@@ -2,85 +2,63 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Intel Miner | Live Terminal</title>
+    <title>Stealth Intel Miner</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <button class="theme-toggle" onclick="toggleTheme()" id="tBtn">
-        <i class="fa-solid fa-moon"></i>
-    </button>
-
     <div class="container">
         <header class="dashboard-header">
-            <h1><i class="fa-brands fa-google"></i> GOOGLE PDF MINER</h1>
-            <p><i class="fa-solid fa-terminal"></i> Live Extraction & URL Intelligence</p>
+            <h1><i class="fa-solid fa-satellite-dish"></i> INTEL MINER</h1>
+            <p>Google Dorking & PDF Data Extraction</p>
         </header>
 
         <div class="search-card">
             <form action="/" method="POST" onsubmit="startTracking()">
-                <div class="form-row" style="grid-template-columns: 2fr 0.8fr 1.2fr 0.8fr 1.2fr auto;">
+                <div class="form-row" style="grid-template-columns: 2fr 0.8fr 1.2fr 1.5fr auto;">
                     <div class="form-group">
                         <label>Target Keyword</label>
-                        <input type="text" name="keyword" placeholder="Search..." required>
+                        <input type="text" name="keyword" placeholder="Search Query..." required>
                     </div>
-                    
                     <div class="form-group">
                         <label>Limit</label>
                         <select name="limit">
                             <option value="5">5 Files</option>
-                            <option value="10" selected>10 Files</option>
-                            <option value="20">20 Files</option>
+                            <option value="10">10 Files</option>
                         </select>
                     </div>
-
                     <div class="form-group">
-                        <label>Stealth Delay</label>
+                        <label>Stealth</label>
                         <select name="delay">
-                            <option value="1.0">1s (Fast)</option>
-                            <option value="3.0" selected>3s (Safe)</option>
-                            <option value="5.0">5s (Stealth)</option>
+                            <option value="3.0">3s Delay</option>
+                            <option value="7.0" selected>7s Delay</option>
                         </select>
                     </div>
-
                     <div class="form-group">
-                        <label>__SEP__ Lines</label>
-                        <input type="number" name="line_interval" value="30">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Filter Mode</label>
+                        <label>Mode</label>
                         <select name="filter_mode">
-                            <option value="urls_only">URLs Only</option>
+                            <option value="urls_only">Only URLs</option>
                             <option value="leads_only">URLs + Pro Emails</option>
                         </select>
                     </div>
-
-                    <button type="submit" class="btn-primary">
-                        <i class="fa-solid fa-bolt"></i> RUN
-                    </button>
+                    <button type="submit" class="btn-primary">START</button>
                 </div>
             </form>
         </div>
 
         {% if show_download %}
         <textarea id="rawBuffer" style="display:none;">{{ full_content }}</textarea>
-
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:40px;">
-            <h2>Results for: <span style="color:var(--accent-glow);">{{ keyword }}</span></h2>
-            <button onclick="downloadLocal()" class="btn-primary" style="background:var(--accent-success); border:none;">
-                <i class="fa-solid fa-download"></i> MANUAL EXPORT
+        <div style="margin-top:40px; display:flex; justify-content:space-between; align-items:center;">
+            <h3>Results: {{ keyword }}</h3>
+            <button onclick="downloadLocal()" class="btn-primary" style="background:#2ecc71; border:none;">
+                <i class="fa-solid fa-file-export"></i> DOWNLOAD DATA
             </button>
         </div>
-
         <div class="grid-results">
             {% for item in results %}
-            <div class="result-card" style="opacity: {{ '1' if item.status == 'Success' else '0.5' }};">
-                <h3 title="{{ item.title }}">{{ item.title[:30] }}...</h3>
-                <p style="font-size:0.65rem; color:var(--text-dim);">
-                    {{ item.status }}
-                </p>
+            <div class="result-card" style="opacity: {{ '1' if item.status == 'Success' else '0.6' }};">
+                <h4>{{ item.title }}</h4>
+                <p style="font-size:0.7rem; color:#888;">{{ item.status }}</p>
                 <div class="status-bar {{ 'success' if item.status == 'Success' else 'fail' }}"></div>
             </div>
             {% endfor %}
@@ -90,84 +68,43 @@
 
     <div id="loader" class="loader-overlay" style="display:none;">
         <div class="spinner"></div>
-        <h2 id="p-status">Initiating...</h2>
+        <h2 id="p-status">Awaiting Network...</h2>
+        <div class="progress-bar-bg"><div id="p-bar" class="progress-bar-fill"></div></div>
+        <p id="p-count">0 / 0 Files</p>
         
-        <div class="progress-bar-bg">
-            <div id="p-bar" class="progress-bar-fill"></div>
-        </div>
-
-        <div style="margin-bottom: 20px;">
-            <p id="p-percent-text"><span id="p-percent">0</span>%</p>
-            <p id="p-count" style="font-size:0.8rem; color:var(--text-dim);">0 / 0 Files</p>
-        </div>
-
-        <div class="terminal-container" style="width:90%; max-width:600px; text-align:left;">
-            <p style="font-size:0.7rem; color:var(--accent-glow); margin-bottom:5px; font-family:monospace;">> LIVE_DATA_STREAM:</p>
-            <div id="live-terminal" style="background:#000; color:#0f0; font-family:'JetBrains Mono', monospace; font-size:0.8rem; padding:15px; border-radius:8px; height:120px; overflow:hidden; border:1px solid #333; line-height:1.4; box-shadow: 0 0 15px rgba(0,255,0,0.1);">
-                Awaiting connection...
+        <div class="terminal-box" style="margin-top:20px; width:80%; max-width:600px;">
+            <p style="font-size:0.7rem; color:#0f0; margin-bottom:5px; font-family:monospace;">> LIVE_LOG_STATUS:</p>
+            <div id="live-terminal" style="background:#000; color:#0f0; font-family:monospace; padding:15px; border-radius:5px; height:100px; overflow:hidden; border:1px solid #333; text-align:left; font-size:0.8rem;">
+                Initializing rotation...
             </div>
         </div>
     </div>
 
     <script>
-        // 1. Theme Toggle
-        function toggleTheme() {
-            document.body.classList.toggle('light-mode');
-            const isL = document.body.classList.contains('light-mode');
-            localStorage.setItem('theme', isL ? 'light' : 'dark');
-            document.getElementById('tBtn').innerHTML = isL ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
-        }
-        if(localStorage.getItem('theme')==='light') toggleTheme();
-
-        // 2. Client-Side Download
         function downloadLocal() {
             const data = document.getElementById('rawBuffer').value;
-            if(!data.trim()) return;
+            if(!data.trim()) { alert("No URLs matched your filters."); return; }
             const blob = new Blob([data], { type: 'text/plain' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = "mined_urls_export.txt";
+            a.href = url; a.download = "mined_urls.txt";
             document.body.appendChild(a);
             a.click();
-            window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
         }
 
-        // 3. Auto-Download on Finish
-        window.onload = function() {
-            const buffer = document.getElementById('rawBuffer');
-            if (buffer && buffer.value.trim().length > 0) {
-                downloadLocal();
-            }
-        };
-
-        // 4. Progress Stream with Live Terminal
         function startTracking() {
             document.getElementById('loader').style.display = 'flex';
             const es = new EventSource("/progress-stream");
-            
             es.onmessage = (e) => {
                 const d = JSON.parse(e.data);
                 const pct = d.total > 0 ? Math.round((d.current / d.total) * 100) : 0;
-                
                 document.getElementById('p-status').innerText = d.status;
                 document.getElementById('p-bar').style.width = pct + "%";
-                document.getElementById('p-percent').innerText = pct;
                 document.getElementById('p-count').innerText = `${d.current} / ${d.total} Files`;
-                
-                // Update Live Terminal
-                const term = document.getElementById('live-terminal');
-                if(d.preview) {
-                    term.innerText = "> " + d.preview;
-                }
-                
-                if(d.status === "Completed") {
-                    es.close();
-                }
+                if(d.preview) document.getElementById('live-terminal').innerText = "> " + d.preview;
+                if(d.status === "Completed") es.close();
             };
-
-            es.onerror = () => es.close();
         }
     </script>
 </body>

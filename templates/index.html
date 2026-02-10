@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Data Collector | Clean Mode</title>
+    <title>URL Intel Collector</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
@@ -11,16 +11,16 @@
 
     <div class="container">
         <header class="dashboard-header">
-            <h1><i class="fa-solid fa-filter"></i> CLEAN MINER</h1>
-            <p>Targeted PDF Extraction</p>
+            <h1><i class="fa-solid fa-link"></i> URL MINER</h1>
+            <p>Skip-Logic Extraction System</p>
         </header>
 
         <div class="search-card">
             <form action="/" method="POST" onsubmit="startTracking()">
                 <div class="form-row">
-                    <div class="form-group"><label>Keyword</label><input type="text" name="keyword" required></div>
+                    <div class="form-group"><label>Target Keyword</label><input type="text" name="keyword" placeholder="Search..." required></div>
                     <div class="form-group">
-                        <label>Limit</label>
+                        <label>Files</label>
                         <select name="limit">
                             <option value="10">10</option><option value="50">50</option>
                             <option value="100">100</option><option value="300">300</option>
@@ -28,31 +28,41 @@
                     </div>
                     <div class="form-group"><label>__SEP__ Every X</label><input type="number" name="line_interval" value="30"></div>
                     <div class="form-group">
-                        <label>Mode</label>
+                        <label>Extraction Mode</label>
                         <select name="filter_mode">
-                            <option value="no_filter">No Filter</option>
-                            <option value="leads_only">URLs & Pro Emails</option>
+                            <option value="urls_only">Only Lines with URLs</option>
+                            <option value="leads_only">URLs + Pro Emails</option>
                         </select>
                     </div>
-                    <button type="submit" class="btn-primary">EXECUTE</button>
+                    <button type="submit" class="btn-primary">START SCAN</button>
                 </div>
             </form>
         </div>
 
         {% if show_download %}
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:40px;">
-            <h2>Extracted Results</h2>
+            <h2>Collection Results</h2>
             <textarea id="rawBuffer" style="display:none;">{{ full_content }}</textarea>
             <button onclick="downloadLocal()" class="btn-primary" style="background:var(--accent-success); border:none;">
-                <i class="fa-solid fa-download"></i> MANUAL DOWNLOAD
+                <i class="fa-solid fa-file-download"></i> SAVE .TXT
             </button>
+        </div>
+        
+        <div class="grid-results">
+            {% for item in results %}
+            <div class="result-card" style="opacity: {{ '1' if item.status == 'Success' else '0.5' }};">
+                <h3 style="font-size:0.75rem;">{{ item.title[:45] }}</h3>
+                <p style="font-size:0.65rem; color:var(--text-dim);">{{ item.status }}</p>
+                <div class="status-bar {{ 'success' if item.status == 'Success' else 'fail' }}"></div>
+            </div>
+            {% endfor %}
         </div>
         {% endif %}
     </div>
 
     <div id="loader" class="loader-overlay" style="display:none;">
         <div class="spinner"></div>
-        <h2 id="p-status">Processing...</h2>
+        <h2 id="p-status">Analyzing PDF Data...</h2>
         <div class="progress-bar-bg"><div id="p-bar" class="progress-bar-fill"></div></div>
         <p><span id="p-percent">0</span>%</p>
     </div>
@@ -60,24 +70,20 @@
     <script>
         function downloadLocal() {
             const data = document.getElementById('rawBuffer').value;
-            if(!data.trim()) return;
+            if(!data.trim()) { alert("No URLs were found in this batch."); return; }
             const blob = new Blob([data], { type: 'text/plain' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = "clean_data_export.txt";
+            a.download = "url_filtered_data.txt";
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
         }
 
-        // Auto-download triggers when page finishes loading with results
         window.onload = function() {
             const buffer = document.getElementById('rawBuffer');
-            if (buffer && buffer.value.trim().length > 0) {
-                downloadLocal();
-            }
+            if (buffer && buffer.value.trim().length > 0) { downloadLocal(); }
         };
 
         function startTracking() {

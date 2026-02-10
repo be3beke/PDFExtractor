@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>OSINT PDF Miner v3</title>
+    <title>OSINT Collector v3</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
@@ -11,53 +11,47 @@
 
     <div class="container">
         <header class="dashboard-header">
-            <h1><i class="fa-solid fa-satellite"></i> DATA COLLECTOR</h1>
-            <p><i class="fa-solid fa-code-branch"></i> Professional PDF Intelligence & Lead Extractor</p>
+            <h1><i class="fa-solid fa-microchip"></i> DATA COLLECTOR</h1>
+            <p>Archive.org Intelligence Miner</p>
         </header>
 
         <div class="search-card">
             <form action="/" method="POST" onsubmit="startTracking()">
                 <div class="form-row">
-                    <div class="form-group">
-                        <label>Keyword</label>
-                        <input type="text" name="keyword" placeholder="e.g. Cybersecurity Report" required>
-                    </div>
+                    <div class="form-group"><label>Keyword</label><input type="text" name="keyword" required></div>
                     <div class="form-group">
                         <label>Limit</label>
                         <select name="limit">
-                            <option value="10">10 Files</option>
-                            <option value="50">50 Files</option>
-                            <option value="100">100 Files</option>
-                            <option value="300">300 Files</option>
+                            <option value="10">10</option><option value="50">50</option>
+                            <option value="100">100</option><option value="300">300</option>
                         </select>
                     </div>
+                    <div class="form-group"><label>__SEP__ Lines</label><input type="number" name="line_interval" value="30"></div>
                     <div class="form-group">
-                        <label>__SEP__ Lines</label>
-                        <input type="number" name="line_interval" value="30">
-                    </div>
-                    <div class="form-group">
-                        <label>Intelligence Filter</label>
+                        <label>Filter</label>
                         <select name="filter_mode">
-                            <option value="no_filter">No Filter (Full Text)</option>
-                            <option value="leads_only">URLs & Pro Emails Only</option>
+                            <option value="no_filter">No Filter</option>
+                            <option value="leads_only">URLs & Pro Emails</option>
                         </select>
                     </div>
-                    <button type="submit" class="btn-primary">START SCAN</button>
+                    <button type="submit" class="btn-primary">START</button>
                 </div>
             </form>
         </div>
 
-        {% if results %}
+        {% if show_download %}
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:40px;">
-            <h2>Query: {{ keyword }}</h2>
-            <a href="/download" class="btn-primary" style="background:var(--accent-success); text-decoration:none;">
-                <i class="fa-solid fa-file-export"></i> DOWNLOAD RESULTS
-            </a>
+            <h2>Results: {{ keyword }}</h2>
+            <textarea id="rawBuffer" style="display:none;">{{ full_content }}</textarea>
+            <button onclick="downloadLocal()" class="btn-primary" style="background:var(--accent-success); border:none;">
+                <i class="fa-solid fa-file-download"></i> DOWNLOAD .TXT
+            </button>
         </div>
+        
         <div class="grid-results">
             {% for item in results %}
             <div class="result-card">
-                <h3 style="font-size:0.85rem; margin:0;">{{ item.title[:50] }}</h3>
+                <h3 style="font-size:0.8rem;">{{ item.title[:40] }}</h3>
                 <div class="status-bar {{ 'success' if item.status == 'Success' else 'fail' }}"></div>
             </div>
             {% endfor %}
@@ -67,13 +61,26 @@
 
     <div id="loader" class="loader-overlay" style="display:none;">
         <div class="spinner"></div>
-        <h2 id="p-status" style="margin:20px 0 5px; font-weight:400;">Syncing...</h2>
+        <h2 id="p-status">Syncing...</h2>
         <div class="progress-bar-bg"><div id="p-bar" class="progress-bar-fill"></div></div>
-        <p style="font-family:'JetBrains Mono'; font-size:1.1rem;"><span id="p-percent">0</span>%</p>
-        <p id="p-count" style="color:var(--text-dim); font-size:0.8rem;">0/0 Processed</p>
+        <p><span id="p-percent">0</span>%</p>
     </div>
 
     <script>
+        // Download function that bypasses server memory
+        function downloadLocal() {
+            const data = document.getElementById('rawBuffer').value;
+            const blob = new Blob([data], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = "mined_data.txt";
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
         function toggleTheme() {
             document.body.classList.toggle('light-mode');
             const isL = document.body.classList.contains('light-mode');
@@ -91,7 +98,6 @@
                 document.getElementById('p-status').innerText = d.status;
                 document.getElementById('p-bar').style.width = pct + "%";
                 document.getElementById('p-percent').innerText = pct;
-                document.getElementById('p-count').innerText = `${d.current}/${d.total} Files`;
                 if(d.status === "Completed") es.close();
             };
         }

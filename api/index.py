@@ -25,10 +25,7 @@ def inject_separators(text, line_interval):
     return "\n".join(result)
 
 def apply_intelligence_filter(text, mode):
-    """Filters lines for URLs or Professional Emails (No generic providers)."""
-    if mode == "no_filter":
-        return text
-    
+    """Filters lines for URLs or Professional Emails."""
     lines = text.splitlines()
     filtered = []
     url_p = r'https?://\S+|www\.\S+'
@@ -37,13 +34,15 @@ def apply_intelligence_filter(text, mode):
     
     for line in lines:
         has_url = re.search(url_p, line)
-        email_m = re.search(eml_p, line)
         
+        # In 'leads_only' mode, we also look for pro emails
         valid_eml = False
-        if email_m:
-            email_val = email_m.group().lower()
-            if not any(domain in email_val for domain in blacklist):
-                valid_eml = True
+        if mode == "leads_only":
+            email_m = re.search(eml_p, line)
+            if email_m:
+                email_val = email_m.group().lower()
+                if not any(domain in email_val for domain in blacklist):
+                    valid_eml = True
         
         if has_url or valid_eml:
             filtered.append(line.strip())
@@ -90,28 +89,36 @@ def index():
 
         progress_data["total"] = len(docs)
         results = []
-        final_text = "" # Purely clean content start
+        final_text = "" 
+        url_pattern = r'https?://\S+|www\.\S+'
 
         for i, item in enumerate(docs):
             progress_data["current"] = i + 1
-            progress_data["status"] = f"Mining: {item.get('title', 'Doc')[:20]}..."
+            progress_data["status"] = f"Checking: {item.get('title', 'Doc')[:20]}..."
             pdf_url = get_pdf_link(item['identifier'])
+            
             if pdf_url:
                 try:
-                    r = requests.get(pdf_url, timeout=10)
+                    r = requests.get(pdf_url, timeout=12)
                     with io.BytesIO(r.content) as f:
                         reader = PdfReader(f)
-                        raw = "\n".join([p.extract_text() for p in reader.pages if p.extract_text()])
+                        raw_content = "\n".join([p.extract_text() for p in reader.pages if p.extract_text()])
                     
-                    filtered = apply_intelligence_filter(raw, filter_mode)
+                    # --- NEW SKIP LOGIC ---
+                    # Check if the raw text contains at least one URL
+                    if not re.search(url_pattern, raw_content):
+                        results.append({'title': item['title'], 'status': 'Skipped (No URLs)'})
+                        continue 
+
+                    # If URL found, proceed with filtering
+                    filtered = apply_intelligence_filter(raw_content, filter_mode)
                     processed = inject_separators(filtered, line_interval)
                     
                     if processed.strip():
-                        # Only adding the actual content
                         final_text += f"{processed}\n\n"
                         results.append({'title': item['title'], 'status': 'Success'})
                     else:
-                        results.append({'title': item['title'], 'status': 'No Match'})
+                        results.append({'title': item['title'], 'status': 'No Matching Lines'})
                 except:
                     results.append({'title': item['title'], 'status': 'Error'})
             else:

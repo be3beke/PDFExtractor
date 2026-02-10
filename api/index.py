@@ -13,8 +13,10 @@ app = Flask(__name__, template_folder='../templates', static_folder='../static')
 progress_data = {"current": 0, "total": 0, "status": "Idle", "active": False}
 
 def inject_separators(text, line_interval):
+    """Adds __SEP__ every X non-empty lines."""
     raw_lines = text.splitlines()
     clean_lines = [line.strip() for line in raw_lines if line.strip()]
+    
     result = []
     for i, line in enumerate(clean_lines):
         result.append(line)
@@ -23,7 +25,10 @@ def inject_separators(text, line_interval):
     return "\n".join(result)
 
 def apply_intelligence_filter(text, mode):
-    if mode == "no_filter": return text
+    """Filters lines for URLs or Professional Emails (No generic providers)."""
+    if mode == "no_filter":
+        return text
+    
     lines = text.splitlines()
     filtered = []
     url_p = r'https?://\S+|www\.\S+'
@@ -33,9 +38,16 @@ def apply_intelligence_filter(text, mode):
     for line in lines:
         has_url = re.search(url_p, line)
         email_m = re.search(eml_p, line)
-        valid_eml = email_m and not any(d in email_m.group().lower() for d in blacklist)
+        
+        valid_eml = False
+        if email_m:
+            email_val = email_m.group().lower()
+            if not any(domain in email_val for domain in blacklist):
+                valid_eml = True
+        
         if has_url or valid_eml:
             filtered.append(line.strip())
+            
     return "\n".join(filtered)
 
 def get_pdf_link(identifier):
@@ -44,7 +56,9 @@ def get_pdf_link(identifier):
         for f in data.get('files', []):
             if f.get('name', '').lower().endswith('.pdf'):
                 return f"https://archive.org/download/{identifier}/{f['name']}"
-    except: return None
+    except:
+        return None
+    return None
 
 @app.route('/progress-stream')
 def progress_stream():
@@ -52,7 +66,8 @@ def progress_stream():
         while True:
             yield f"data: {json.dumps(progress_data)}\n\n"
             time.sleep(0.5)
-            if progress_data["status"] == "Completed": break
+            if progress_data["status"] == "Completed":
+                break
     return Response(generate(), mimetype='text/event-stream')
 
 @app.route('/', methods=['GET', 'POST'])
@@ -68,12 +83,14 @@ def index():
         
         search_url = "https://archive.org/advancedsearch.php"
         params = {'q': f'({keyword}) AND format:PDF', 'fl[]': 'identifier,title', 'rows': limit, 'output': 'json'}
-        try: docs = requests.get(search_url, params=params).json().get('response', {}).get('docs', [])
-        except: docs = []
+        try:
+            docs = requests.get(search_url, params=params).json().get('response', {}).get('docs', [])
+        except:
+            docs = []
 
         progress_data["total"] = len(docs)
         results = []
-        final_text = f"--- DATA COLLECTION: {keyword.upper()} | FILTER: {filter_mode} ---\n\n"
+        final_text = "" # Purely clean content start
 
         for i, item in enumerate(docs):
             progress_data["current"] = i + 1
@@ -90,14 +107,17 @@ def index():
                     processed = inject_separators(filtered, line_interval)
                     
                     if processed.strip():
-                        final_text += f"SOURCE: {pdf_url}\nTITLE: {item['title']}\n" + "-"*20 + f"\n{processed}\n\n" + "="*40 + "\n\n"
+                        # Only adding the actual content
+                        final_text += f"{processed}\n\n"
                         results.append({'title': item['title'], 'status': 'Success'})
-                    else: results.append({'title': item['title'], 'status': 'No Match'})
-                except: results.append({'title': item['title'], 'status': 'Error'})
-            else: results.append({'title': item['title'], 'status': 'Missing'})
+                    else:
+                        results.append({'title': item['title'], 'status': 'No Match'})
+                except:
+                    results.append({'title': item['title'], 'status': 'Error'})
+            else:
+                results.append({'title': item['title'], 'status': 'Missing'})
 
         progress_data["status"] = "Completed"
-        # We pass final_text to the template so JS can handle the download
         return render_template('index.html', results=results, keyword=keyword, show_download=True, full_content=final_text)
     
     return render_template('index.html', results=None)

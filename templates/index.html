@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Intel Miner | Stealth Mode</title>
+    <title>Google Intel Miner | Live Terminal</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
@@ -15,7 +15,7 @@
     <div class="container">
         <header class="dashboard-header">
             <h1><i class="fa-brands fa-google"></i> GOOGLE PDF MINER</h1>
-            <p><i class="fa-solid fa-shield-halved"></i> Stealth Extraction & URL Intelligence</p>
+            <p><i class="fa-solid fa-terminal"></i> Live Extraction & URL Intelligence</p>
         </header>
 
         <div class="search-card">
@@ -23,7 +23,7 @@
                 <div class="form-row" style="grid-template-columns: 2fr 0.8fr 1.2fr 0.8fr 1.2fr auto;">
                     <div class="form-group">
                         <label>Target Keyword</label>
-                        <input type="text" name="keyword" placeholder="e.g. 'internal report'" required>
+                        <input type="text" name="keyword" placeholder="Search..." required>
                     </div>
                     
                     <div class="form-group">
@@ -58,7 +58,7 @@
                     </div>
 
                     <button type="submit" class="btn-primary">
-                        <i class="fa-solid fa-magnifying-glass"></i> SCAN
+                        <i class="fa-solid fa-bolt"></i> RUN
                     </button>
                 </div>
             </form>
@@ -68,18 +68,18 @@
         <textarea id="rawBuffer" style="display:none;">{{ full_content }}</textarea>
 
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:40px;">
-            <h2>Scanned: <span style="color:var(--accent-glow);">{{ keyword }}</span></h2>
+            <h2>Results for: <span style="color:var(--accent-glow);">{{ keyword }}</span></h2>
             <button onclick="downloadLocal()" class="btn-primary" style="background:var(--accent-success); border:none;">
-                <i class="fa-solid fa-file-arrow-down"></i> DOWNLOAD CLEAN TXT
+                <i class="fa-solid fa-download"></i> MANUAL EXPORT
             </button>
         </div>
 
         <div class="grid-results">
             {% for item in results %}
-            <div class="result-card" style="opacity: {{ '1' if item.status == 'Success' else '0.6' }};">
-                <h3 title="{{ item.title }}">{{ item.title[:35] }}{{ '...' if item.title|length > 35 }}</h3>
-                <p style="font-size:0.7rem; color:var(--text-dim);">
-                    <i class="fa-solid fa-circle-info"></i> {{ item.status }}
+            <div class="result-card" style="opacity: {{ '1' if item.status == 'Success' else '0.5' }};">
+                <h3 title="{{ item.title }}">{{ item.title[:30] }}...</h3>
+                <p style="font-size:0.65rem; color:var(--text-dim);">
+                    {{ item.status }}
                 </p>
                 <div class="status-bar {{ 'success' if item.status == 'Success' else 'fail' }}"></div>
             </div>
@@ -90,18 +90,27 @@
 
     <div id="loader" class="loader-overlay" style="display:none;">
         <div class="spinner"></div>
-        <h2 id="p-status">Initiating Google Dork...</h2>
+        <h2 id="p-status">Initiating...</h2>
+        
         <div class="progress-bar-bg">
             <div id="p-bar" class="progress-bar-fill"></div>
         </div>
-        <div style="font-family:'JetBrains Mono'; text-align:center;">
-            <p><span id="p-percent">0</span>% Complete</p>
-            <p id="p-count" style="font-size:0.8rem; color:var(--text-dim);">0 / 0 Files Processed</p>
+
+        <div style="margin-bottom: 20px;">
+            <p id="p-percent-text"><span id="p-percent">0</span>%</p>
+            <p id="p-count" style="font-size:0.8rem; color:var(--text-dim);">0 / 0 Files</p>
+        </div>
+
+        <div class="terminal-container" style="width:90%; max-width:600px; text-align:left;">
+            <p style="font-size:0.7rem; color:var(--accent-glow); margin-bottom:5px; font-family:monospace;">> LIVE_DATA_STREAM:</p>
+            <div id="live-terminal" style="background:#000; color:#0f0; font-family:'JetBrains Mono', monospace; font-size:0.8rem; padding:15px; border-radius:8px; height:120px; overflow:hidden; border:1px solid #333; line-height:1.4; box-shadow: 0 0 15px rgba(0,255,0,0.1);">
+                Awaiting connection...
+            </div>
         </div>
     </div>
 
     <script>
-        // 1. Theme Logic
+        // 1. Theme Toggle
         function toggleTheme() {
             document.body.classList.toggle('light-mode');
             const isL = document.body.classList.contains('light-mode');
@@ -110,26 +119,22 @@
         }
         if(localStorage.getItem('theme')==='light') toggleTheme();
 
-        // 2. Client-Side Download (Bypasses Vercel Timeouts/Memory)
+        // 2. Client-Side Download
         function downloadLocal() {
             const data = document.getElementById('rawBuffer').value;
-            if(!data.trim()) {
-                alert("No URLs found. Try a different keyword or filter.");
-                return;
-            }
+            if(!data.trim()) return;
             const blob = new Blob([data], { type: 'text/plain' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.style.display = 'none';
             a.href = url;
-            a.download = "google_intel_export.txt";
+            a.download = "mined_urls_export.txt";
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
         }
 
-        // 3. Auto-Trigger Download on page load if results exist
+        // 3. Auto-Download on Finish
         window.onload = function() {
             const buffer = document.getElementById('rawBuffer');
             if (buffer && buffer.value.trim().length > 0) {
@@ -137,32 +142,32 @@
             }
         };
 
-        // 4. Real-time Progress Tracking (SSE)
+        // 4. Progress Stream with Live Terminal
         function startTracking() {
-            // Show the loader immediately
             document.getElementById('loader').style.display = 'flex';
-            
             const es = new EventSource("/progress-stream");
             
             es.onmessage = (e) => {
-                const data = JSON.parse(e.data);
-                const pct = data.total > 0 ? Math.round((data.current / data.total) * 100) : 0;
+                const d = JSON.parse(e.data);
+                const pct = d.total > 0 ? Math.round((d.current / d.total) * 100) : 0;
                 
-                // Update UI elements
-                document.getElementById('p-status').innerText = data.status;
+                document.getElementById('p-status').innerText = d.status;
                 document.getElementById('p-bar').style.width = pct + "%";
                 document.getElementById('p-percent').innerText = pct;
-                document.getElementById('p-count').innerText = `${data.current} / ${data.total} Files`;
+                document.getElementById('p-count').innerText = `${d.current} / ${d.total} Files`;
                 
-                if(data.status === "Completed") {
+                // Update Live Terminal
+                const term = document.getElementById('live-terminal');
+                if(d.preview) {
+                    term.innerText = "> " + d.preview;
+                }
+                
+                if(d.status === "Completed") {
                     es.close();
                 }
             };
 
-            es.onerror = () => {
-                console.log("Progress stream closed or interrupted.");
-                es.close();
-            };
+            es.onerror = () => es.close();
         }
     </script>
 </body>

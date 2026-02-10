@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>URL Intel Collector</title>
+    <title>Google PDF Miner</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
@@ -11,47 +11,46 @@
 
     <div class="container">
         <header class="dashboard-header">
-            <h1><i class="fa-solid fa-link"></i> URL MINER</h1>
-            <p>Skip-Logic Extraction System</p>
+            <h1><i class="fa-brands fa-google"></i> GOOGLE MINER</h1>
+            <p>Direct Google Search & PDF Extraction</p>
         </header>
 
         <div class="search-card">
             <form action="/" method="POST" onsubmit="startTracking()">
                 <div class="form-row">
-                    <div class="form-group"><label>Target Keyword</label><input type="text" name="keyword" placeholder="Search..." required></div>
+                    <div class="form-group"><label>Google Search Query</label><input type="text" name="keyword" placeholder="Search keyword..." required></div>
                     <div class="form-group">
-                        <label>Files</label>
+                        <label>Max Results</label>
                         <select name="limit">
-                            <option value="10">10</option><option value="50">50</option>
-                            <option value="100">100</option><option value="300">300</option>
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="20">20</option>
                         </select>
                     </div>
-                    <div class="form-group"><label>__SEP__ Every X</label><input type="number" name="line_interval" value="30"></div>
+                    <div class="form-group"><label>Separator Every X</label><input type="number" name="line_interval" value="30"></div>
                     <div class="form-group">
-                        <label>Extraction Mode</label>
+                        <label>Filter Mode</label>
                         <select name="filter_mode">
-                            <option value="urls_only">Only Lines with URLs</option>
+                            <option value="urls_only">URLs Only</option>
                             <option value="leads_only">URLs + Pro Emails</option>
                         </select>
                     </div>
-                    <button type="submit" class="btn-primary">START SCAN</button>
+                    <button type="submit" class="btn-primary">SCAN GOOGLE</button>
                 </div>
             </form>
         </div>
-
         {% if show_download %}
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:40px;">
-            <h2>Collection Results</h2>
+            <h2>Mined Data</h2>
             <textarea id="rawBuffer" style="display:none;">{{ full_content }}</textarea>
             <button onclick="downloadLocal()" class="btn-primary" style="background:var(--accent-success); border:none;">
-                <i class="fa-solid fa-file-download"></i> SAVE .TXT
+                <i class="fa-solid fa-file-download"></i> SAVE DATA
             </button>
         </div>
-        
         <div class="grid-results">
             {% for item in results %}
             <div class="result-card" style="opacity: {{ '1' if item.status == 'Success' else '0.5' }};">
-                <h3 style="font-size:0.75rem;">{{ item.title[:45] }}</h3>
+                <h3 style="font-size:0.75rem;">{{ item.title }}</h3>
                 <p style="font-size:0.65rem; color:var(--text-dim);">{{ item.status }}</p>
                 <div class="status-bar {{ 'success' if item.status == 'Success' else 'fail' }}"></div>
             </div>
@@ -62,7 +61,7 @@
 
     <div id="loader" class="loader-overlay" style="display:none;">
         <div class="spinner"></div>
-        <h2 id="p-status">Analyzing PDF Data...</h2>
+        <h2 id="p-status">Google is searching...</h2>
         <div class="progress-bar-bg"><div id="p-bar" class="progress-bar-fill"></div></div>
         <p><span id="p-percent">0</span>%</p>
     </div>
@@ -70,22 +69,19 @@
     <script>
         function downloadLocal() {
             const data = document.getElementById('rawBuffer').value;
-            if(!data.trim()) { alert("No URLs were found in this batch."); return; }
+            if(!data.trim()) return;
             const blob = new Blob([data], { type: 'text/plain' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = "url_filtered_data.txt";
+            a.href = url; a.download = "google_mined_data.txt";
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
         }
-
         window.onload = function() {
             const buffer = document.getElementById('rawBuffer');
             if (buffer && buffer.value.trim().length > 0) { downloadLocal(); }
         };
-
         function startTracking() {
             document.getElementById('loader').style.display = 'flex';
             const es = new EventSource("/progress-stream");
@@ -98,7 +94,6 @@
                 if(d.status === "Completed") es.close();
             };
         }
-
         function toggleTheme() {
             document.body.classList.toggle('light-mode');
             const isL = document.body.classList.contains('light-mode');

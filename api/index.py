@@ -17,17 +17,25 @@ USER_AGENTS = [
 ]
 
 def apply_intelligence_filter(text, mode):
+    if mode == "raw_mode":
+        return text # No filtering, return everything
+    
     lines = text.splitlines()
     filtered = []
-    url_p = r'(https?://[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9.-]+\.(com|net|org|io|gov|biz|me|co))'
+    url_p = r'(https?://[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9.-]+\.(com|net|org|io|gov|biz|me|co|info|edu))'
     eml_p = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
     
     for line in lines:
+        line = line.strip()
+        if not line: continue
         has_url = re.search(url_p, line, re.IGNORECASE)
-        valid_eml = (mode == "leads_only" and re.search(eml_p, line))
+        has_email = re.search(eml_p, line)
         
-        if has_url or valid_eml:
-            filtered.append(line.strip())
+        if mode == "leads_only":
+            if has_url or has_email: filtered.append(line)
+        else: # urls_only
+            if has_url: filtered.append(line)
+                
     return "\n".join(filtered)
 
 @app.route('/progress-stream')
@@ -43,16 +51,15 @@ def progress_stream():
 def index():
     global progress_data
     start_time = time.time()
-    timeout_limit = 9.0
+    timeout_limit = 9.5 
     
     if request.method == 'POST':
         keyword = request.form.get('keyword')
         limit = int(request.form.get('limit', 5))
-        delay_sec = float(request.form.get('delay', 5.0))
         filter_mode = request.form.get('filter_mode')
         
         query = f'"{keyword}" filetype:pdf'
-        progress_data = {"current": 0, "total": limit, "status": "Searching...", "active": True, "preview": "Initializing Google Dork..."}
+        progress_data = {"current": 0, "total": limit, "status": "Searching...", "active": True, "preview": "Pinging Google..."}
         
         pdf_urls = []
         try:
@@ -60,8 +67,8 @@ def index():
                 if url.lower().endswith('.pdf'):
                     pdf_urls.append(url)
                 if len(pdf_urls) >= limit or (time.time() - start_time) > 4: break
-        except Exception as e:
-            progress_data["preview"] = f"Search Blocked: {str(e)}"
+        except:
+            progress_data["preview"] = "Google Blocked. Slow down."
 
         progress_data["total"] = len(pdf_urls)
         final_text = ""
@@ -69,31 +76,26 @@ def index():
 
         for i, pdf_url in enumerate(pdf_urls):
             if (time.time() - start_time) > timeout_limit: break
-            if i > 0: time.sleep(1)
-
             progress_data["current"] = i + 1
-            progress_data["status"] = f"Analyzing PDF {i+1}..."
+            progress_data["status"] = f"Extracting {i+1}/{len(pdf_urls)}..."
             
             try:
                 r = requests.get(pdf_url, timeout=5, headers={'User-Agent': random.choice(USER_AGENTS)})
                 if r.status_code == 200:
                     reader = PdfReader(io.BytesIO(r.content))
-                    raw_content = "\n".join([(p.extract_text() or "") for p in reader.pages])
-                    filtered = apply_intelligence_filter(raw_content, filter_mode)
+                    raw_content = ""
+                    for page in reader.pages:
+                        raw_content += (page.extract_text() or "") + "\n"
                     
-                    if filtered.strip():
-                        final_text += f"{filtered}\n\n"
-                        # Save content for frontend preview
-                        results.append({
-                            'title': pdf_url.split('/')[-1][:20], 
-                            'status': 'Success', 
-                            'content': filtered
-                        })
-                        progress_data["preview"] = f"Found data in {pdf_url.split('/')[-1][:15]}"
+                    extracted = apply_intelligence_filter(raw_content, filter_mode)
+                    
+                    if extracted.strip():
+                        final_text += f"--- SOURCE: {pdf_url} ---\n{extracted}\n\n"
+                        results.append({'title': pdf_url.split('/')[-1][:20], 'status': 'Success', 'content': extracted})
                     else:
-                        results.append({'title': pdf_url.split('/')[-1][:20], 'status': 'No Links Found'})
+                        results.append({'title': pdf_url.split('/')[-1][:20], 'status': 'Empty Result'})
                 else:
-                    results.append({'title': 'Blocked', 'status': f'HTTP {r.status_code}'})
+                    results.append({'title': 'Error', 'status': f'HTTP {r.status_code}'})
             except:
                 results.append({'title': 'Error', 'status': 'Timeout'})
 
